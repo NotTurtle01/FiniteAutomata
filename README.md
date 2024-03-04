@@ -29,7 +29,5 @@ Recuerde que los archivos a ser leídos deberán mantener el siguiente formato d
 -----------------------------------------------------------------------------------------------------
 2 - Escritura de cadenas.
 
-Para escribir la cadena vacía basta con dejar un espacio en la cadena. El programa interpretará automáticamente ese espacio como el símbolo "λ".
-
 Respecto al resto de símbolos del alfabeto, recuerde respetar lo especificado en la línea 3 del archivo leído. En cualquier otro caso, obtendrá
 un error como respuesta. 

@@ -9,6 +9,8 @@ class Automata:
         self.f_transicion = f_transicion
         self.inicial = inicial
         self.estados_finales = estados_finales
+        self.tipo_automata = "Determinista" # Autómata considerado por defecto Determinista.
+        self.cadena_vacia = False # Autómata considerado por defecto sin e-transiciones.
     
     def leer_archivo(self, ruta_archivo):
         try:
@@ -41,49 +43,80 @@ class Automata:
                             self.f_transicion[self.estados[indice]][self.alfabeto[indice_alfabeto]] = []
                         else:
                             self.f_transicion[self.estados[indice]][self.alfabeto[indice_alfabeto]] = a
+                            if len(a) > 1: # Clasificación del autómata en No-Determinista.
+                                self.tipo_automata = 'No Determinista'
+                            if self.alfabeto[indice_alfabeto] == "λ":
+                                self.tipo_automata = 'No Determinista'
+                                self.cadena_vacia = True
                             
         except FileNotFoundError:
             print(f"\nEl archivo '{ruta_archivo}' no existe.")
             return False
         except Exception as e:
             print(f"\nError al leer el archivo: {e}")
-            return False
+            return False            
         
-        print("\nLectura correcta del archivo.")
+        print(f"\nLectura correcta del archivo. Autómata caracterizado como [{self.tipo_automata}]")
+        if self.cadena_vacia:
+            print("Detectadas TRANSICIONES CON CADENA VACÍA (AFN-e)\n")
         return True
-            
+    
+    def __claus__(self, estados): # Cálculo de la clausura para una lista de estados.
+        for estado in estados:
+            estados += self.f_transicion[estado]["λ"]
+        return estados
+                
     def procesar_cadena(self, cadena:str, verbose=False):
-        cadena = cadena.replace(" ", "λ")
+        cadena = cadena.replace(" ", "")
         estados_actuales = set([self.inicial])
+        if self.tipo_automata == "No Determinista" and self.cadena_vacia:
+            clausura_actual = set(self.__claus__([self.inicial])) # Aplicacion de clausura sobre estado inicial.
         for indice in range(len(cadena)):
             if cadena[indice] not in self.alfabeto:
-                print(f'El alfabeto del autómata no admite el caracter: {cadena[indice]}')
+                print(f'\nERROR. El alfabeto del autómata no admite el caracter: {cadena[indice]}')
                 return False
             
             if verbose == True:
                 print("\n------------------------------------------")
                 print(f"Estados actuales: {estados_actuales}")
+                if self.tipo_automata == "No Determinista" and self.cadena_vacia:
+                    print(f"Clausura actual: {clausura_actual}")
                 print(f"Caracter de entrada [nº {indice+1}] --> {cadena[indice]}")
+            
+            if self.tipo_automata == "No Determinista" and self.cadena_vacia:
+                estados_actuales = clausura_actual
                 
             nuevos_estados = []
             for estado in estados_actuales:
                 if verbose == True:
                     linea = "\n-----Estado: " + str(estado) + " | " + "Entrada: " + str(cadena[indice]) + " | " + "Estados destino: " + str(self.f_transicion[estado][cadena[indice]])
                     if self.f_transicion[estado][cadena[indice]] == []:
-                        linea += " | MUERTE EN ESTADO " + str(estado)
+                        linea += " | MUERTE DEL ESTADO " + str(estado)
                     print(linea)
                 nuevos_estados += self.f_transicion[estado][cadena[indice]]
+                
             estados_actuales = set(nuevos_estados)
+            if self.tipo_automata == "No Determinista" and self.cadena_vacia:
+                clausura_actual = set(self.__claus__(nuevos_estados)) # Aplicación de clausura sobre cada estado actual.
             if len(estados_actuales) == 0:
                 print("\nMUERTE. Transiciones no definidas. Cadena NO aceptada.")
                 return False
          
         print("\n------------------------------------------")
-        print("\nEstados finales del autómata: " + str(estados_actuales))
+        if self.tipo_automata == "No Determinista" and self.cadena_vacia:
+            print("\nEstados finales del autómata: " + str(clausura_actual))
+        else:
+            print("\nEstados finales del autómata: " + str(estados_actuales))
+            
         for i in self.estados_finales:
-            if i in estados_actuales:
-                print("¡Cadena aceptada satisfactoriamente!")
-                return True
+            if not self.cadena_vacia:
+                if i in estados_actuales:
+                    print("¡Cadena aceptada satisfactoriamente!")
+                    return True
+            else:
+                if i in clausura_actual:
+                    print("¡Cadena aceptada satisfactoriamente!")
+                    return True
         print("Cadena NO aceptada.")
         return False
     
@@ -92,7 +125,10 @@ class Automata:
         for i in self.estados:
             impresion += f"\nEstado {i} \n"
             for (clave,valor) in self.f_transicion[i].items():
-                impresion += f"   {i}({clave}) ---> {valor}\n"
+                if clave != "λ":
+                    impresion += f"   {i}({clave}) ---> {valor}\n"
+                elif clave == "λ" and self.tipo_automata == "No Determinista" and self.cadena_vacia:
+                    impresion += f"   {i}({clave}) ---> {valor}\n"
         return impresion
     
     
